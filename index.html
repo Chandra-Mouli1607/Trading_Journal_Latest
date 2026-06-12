@@ -585,13 +585,12 @@
 // FIREBASE CONFIG — replace with your own project config
 // ============================================================
 const firebaseConfig = {
-   apiKey: "AIzaSyCSEiuvkZNHy_T_N8FdnY-0EotjMsZuVDw",
-  authDomain: "trading-journal-fd324.firebaseapp.com",
-  projectId: "trading-journal-fd324",
-  storageBucket: "trading-journal-fd324.firebasestorage.app",
-  messagingSenderId: "29697541574",
-  appId: "1:29697541574:web:9ac6729e496241c2119ec7",
-  measurementId: "G-HWC72EN3F4"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 // ============================================================
 
@@ -768,23 +767,40 @@ async function deleteTrade(id) {
 // ---- CALCULATIONS ----
 function computePnL() {
   const entry = parseFloat(document.getElementById('f-entryPrice').value) || 0;
-  const exit = parseFloat(document.getElementById('f-exitPrice').value) || 0;
-  const lots = parseFloat(document.getElementById('f-lots').value) || 0;
-  const dir = document.getElementById('f-direction').value;
-  const swap = parseFloat(document.getElementById('f-swap').value) || 0;
-  const comm = parseFloat(document.getElementById('f-commission').value) || 0;
-  const sym = (document.getElementById('f-symbol').value || '').toUpperCase();
+  const exit  = parseFloat(document.getElementById('f-exitPrice').value)  || 0;
+  const lots  = parseFloat(document.getElementById('f-lots').value)        || 0;
+  const dir   = document.getElementById('f-direction').value;
+  const swap  = parseFloat(document.getElementById('f-swap').value)        || 0;
+  const comm  = parseFloat(document.getElementById('f-commission').value)  || 0;
+  const sym   = (document.getElementById('f-symbol').value || '').toUpperCase();
 
-  let pips = dir === 'Long' ? exit - entry : entry - exit;
+  // Price difference — direction aware
+  const priceDiff = dir === 'Long' ? exit - entry : entry - exit;
+
   let pnl = 0;
+
   if (sym === 'XAUUSD') {
-    pnl = pips * lots * 100;
+    // Gold: 1 lot = 100 oz. $1 move per oz = $100 per lot
+    // P&L = priceDiff × lots × 100
+    // Verified: (4020-4010) × 0.05 × 100 = $50 ✅
+    pnl = priceDiff * lots * 100;
+
   } else if (sym.includes('JPY')) {
-    pnl = pips * lots * 1000;
+    // JPY pairs: pip = 0.01, contract size = 100,000 units
+    // P&L = priceDiff × lots × 100000 / 100 (divide by pip factor)
+    // = priceDiff × lots × 1000
+    pnl = priceDiff * lots * 1000;
+
   } else {
-    pnl = pips * lots * 10000 * 0.0001 * 100000;
-    if (lots <= 1) pnl = pips * lots * 10;
+    // Standard forex (EURUSD, GBPUSD etc.):
+    // pip = 0.0001, contract size = 100,000 units
+    // P&L = priceDiff × lots × 100000
+    // Verified: (1.15700-1.15600) × 1 × 100000 = $100 ✅
+    // Verified: (1.34200-1.34100) × 1 × 100000 = $100 ✅
+    pnl = priceDiff * lots * 100000;
   }
+
+  // Subtract costs
   pnl = pnl + swap - comm;
   return parseFloat(pnl.toFixed(2));
 }
